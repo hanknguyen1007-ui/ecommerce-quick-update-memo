@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report generator v4 (chạy trong trình duyệt)</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#e2e5ea;--accent:#2457d6;--ok:#188038;--bad:#d93025;--warn:#b26a00;--okbg:#e8f5ec;--badbg:#fdecea;--warnbg:#fff4e0}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1c2029;--ink:#e8ebf1;--mute:#9aa3b2;--line:#2c3240;--accent:#6c93ff;--ok:#5bc27a;--bad:#ff7b72;--warn:#e3a53c;--okbg:#17301f;--badbg:#3a1d1b;--warnbg:#3a2d13}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px}header span{color:var(--mute);font-size:13px}
+main{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+select,input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+textarea{font-family:Consolas,monospace;font-size:12.5px;resize:vertical;white-space:pre}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:7px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;width:100%;margin-top:12px;padding:10px}
+button:disabled{opacity:.5;cursor:wait}
+#val{margin-top:8px;font-size:13px}
+.ok{color:var(--ok)}.fail{color:var(--bad)}.warn{color:var(--warn)}
+#bar{display:none;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:13px}
+#bar.good{background:var(--okbg);color:var(--ok)}#bar.badbar{background:var(--warnbg);color:var(--warn)}#bar.err{background:var(--badbg);color:var(--bad)}
+#bar ul{margin:4px 0 0 18px;padding:0}
+#bar details{margin-top:6px}
+#bar summary{cursor:pointer;color:var(--mute);font-size:12px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+#preview{border:1px solid var(--line);border-radius:8px;padding:6px 16px;background:var(--bg);max-height:60vh;overflow:auto}
+#preview ul{margin:2px 0 2px 0;padding-left:20px}#preview p{margin:10px 0 4px}
+#meta{font-size:12px;color:var(--mute);margin-top:8px}
+.hint{color:var(--mute);font-size:12px}
+.block{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
+.block .bhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+#loading{padding:40px;text-align:center;color:var(--mute)}
+.privacy{font-size:12px;color:var(--mute);max-width:900px;margin:0 auto 10px;padding:0 16px}
+</style>
+</head>
+<body>
+<header><h1>Report generator v4</h1><span>chạy 100% trong trình duyệt (Pyodide) · dữ liệu KHÔNG rời khỏi máy bạn · không LLM, không gửi mạng sau khi trang đã tải</span></header>
+<p class="privacy" id="loading">Đang tải Python runtime (Pyodide) lần đầu, có thể mất vài giây — vui lòng đợi...</p>
+<main style="display:none" id="app">
+<section>
+<div class="card">
+  <div class="row">
+    <div style="flex:3"><label for="title">Tiêu đề chiến dịch</label>
+      <input id="title" placeholder="tự điền từ dữ liệu dán vào, hoặc gõ tay"></div>
+    <div style="flex:1"><label for="timepoint">Mốc thời gian <b style="color:var(--bad)">*</b></label>
+      <input id="timepoint" placeholder="vd 20h 11.11"></div>
+  </div>
+  <div class="hint">Nhiều platform? Dán mỗi platform vào một khối riêng (decision 3) — số liệu sẽ được gộp cho báo cáo.</div>
+  <div id="blocks"></div>
+  <button id="addblock">+ Thêm khối platform</button>
+  <div class="hint" style="margin-top:8px"><a href="#" id="sample-v2">Nạp dữ liệu mẫu — synthetic (v2)</a> · <a href="#" id="sample-v3">Nạp dữ liệu mẫu — synthetic (v3)</a></div>
+  <div id="val"></div>
+  <label for="notes">Ghi chú (tuỳ chọn) <span class="hint">— "Brand: fact" hoặc "Brand fact" (":" không bắt buộc)</span></label>
+  <textarea id="notes" rows="5" spellcheck="false"></textarea>
+  <button id="gen" class="primary">Tạo báo cáo</button>
+</div>
+</section>
+<section>
+<div class="card">
+  <div id="bar"></div>
+  <label id="ackrow" style="display:none;margin:6px 0"><input type="checkbox" id="ack"> Đã kiểm tra cảnh báo</label>
+  <div class="btns">
+    <button id="cmsg" disabled>Copy cho Lark Messenger</button>
+    <button id="cdoc" disabled>Copy cho Lark Docs</button>
+    <button id="dlmd" disabled>Tải .md</button>
+  </div>
+  <div id="preview"></div>
+  <div id="meta"></div>
+</div>
+<div class="card" id="insightscard" style="display:none">
+  <div style="font-weight:600;margin-bottom:6px">Quick insights</div>
+  <ul id="insights"></ul>
+</div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function esc(s){return (s+"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ---------- block textareas (decision 3: one block per platform) ----------
+let blockN=0;
+function addBlock(value){
+  blockN++;
+  const id="block"+blockN;
+  const div=document.createElement("div"); div.className="block"; div.dataset.id=id;
+  div.innerHTML=`<div class="bhead"><span class="hint">Khối #${blockN}</span>`
+    +(blockN>1?`<button class="rm" type="button">Xoá</button>`:'')+`</div>`
+    +`<textarea class="bdata" rows="7" wrap="off" style="white-space:pre;overflow-x:auto" placeholder="Brand\tKênh\tPlan\t..." spellcheck="false">${value?esc(value):""}</textarea>`;
+  $('blocks').appendChild(div);
+  const rm=div.querySelector('.rm'); if(rm) rm.onclick=()=>div.remove();
+  div.querySelector('.bdata').addEventListener('input', scheduleValidate);
+}
+$('addblock').onclick=()=>addBlock("");
+addBlock("");
+
+// ---------- Pyodide bootstrap: fetch the v4/core Python package as plain text, write into the virtual
+// FS, import it -- the SAME package the local server runs (decision 4/G3: one engine). No network call
+// after this carries any user data; only the engine's own .py/.toml source (same-origin, no user input). ----------
+const ROOT = "../../";  // web/v4/index.html -> perf-local root (2 levels up)
+const FILES = [
+  "core/__init__.py","core/tsv.py","core/numfmt.py","core/render.py","core/highlight.py",
+  "v4/__init__.py","v4/facts.py","v4/pipeline.py",
+  "v4/adapters/__init__.py","v4/adapters/base.py","v4/adapters/registry.py","v4/adapters/v2.py","v4/adapters/v3.py",
+  "v4/surfaces/__init__.py","v4/surfaces/text.py","v4/surfaces/notes.py","v4/surfaces/insights.py",
+  "templates/perf-flash/schema.toml",
+];
+let pyodideReady=null;
+async function initPyodide(){
+  const pyodide = await loadPyodide();
+  for(const f of FILES){
+    const text = await (await fetch(ROOT+f)).text();
+    const path = "/app/"+f;
+    const dir = path.substring(0, path.lastIndexOf("/"));
+    pyodide.FS.mkdirTree(dir);
+    pyodide.FS.writeFile(path, text, {encoding:"utf8"});
+  }
+  // optional: typo_fix.toml at repo root, if published
+  try{
+    const t = await (await fetch(ROOT+"typo_fix.toml"));
+    if(t.ok) pyodide.FS.writeFile("/app/typo_fix.toml", await t.text(), {encoding:"utf8"});
+  }catch(e){}
+  await pyodide.runPythonAsync(`
+import sys
+sys.path.insert(0, "/app")
+from v4 import pipeline as P
+`);
+  return pyodide;
+}
+pyodideReady = initPyodide().then(p=>{ $('loading').style.display='none'; $('app').style.display=''; return p; })
+  .catch(e=>{ $('loading').textContent = "Lỗi tải Pyodide: "+e; throw e; });
+
+// ---------- R4 (CHARTER v4.4): title/timepoint start empty and autofill from the pasted header until the
+// user types into that field themselves (then autofill stops for that field, same "dirty" pattern the old
+// local-server UI used). ----------
+const dirty = {title:false, timepoint:false};
+$('title').addEventListener('input', ()=>{ dirty.title = true; });
+$('timepoint').addEventListener('input', ()=>{ dirty.timepoint = true; });
+
+let validateTimer=null;
+function scheduleValidate(){
+  clearTimeout(validateTimer);
+  validateTimer = setTimeout(liveValidate, 400);
+}
+async function analyzeOnce(pyodide, text){
+  pyodide.globals.set('_vtext', text);
+  pyodide.globals.set('_vtitle', $('title').value);
+  pyodide.globals.set('_vtp', $('timepoint').value);
+  const resultJson = await pyodide.runPythonAsync(`
+import json
+json.dumps(P.analyze(_vtext, _vtitle, _vtp), ensure_ascii=False)
+`);
+  return JSON.parse(resultJson);
+}
+async function liveValidate(){
+  const pyodide = await pyodideReady;
+  const text = (document.querySelector('.bdata')||{}).value || '';
+  if(!text.trim()){ $('val').innerHTML=''; return; }
+  let r;
+  try{ r = await analyzeOnce(pyodide, text); }catch(e){ return; }
+  if(r.suggest && ((!dirty.title && r.suggest.title) || (!dirty.timepoint && r.suggest.timepoint))){
+    if(!dirty.title && r.suggest.title) $('title').value = r.suggest.title;
+    if(!dirty.timepoint && r.suggest.timepoint) $('timepoint').value = r.suggest.timepoint;
+    try{ r = await analyzeOnce(pyodide, text); }catch(e){}  // re-check with the now-autofilled fields
+  }
+  renderChecks(r);
+}
+
+// ---------- run ----------
+let lastResult=null;
+function gate(){
+  const need = $('ackrow').style.display!=='none' && !$('ack').checked;
+  for(const id of ['cmsg','cdoc','dlmd']) $(id).disabled = !lastResult || need;
+}
+$('ack').onchange = gate;
+
+function bar(kind, html){ const b=$('bar'); b.className=kind; b.style.display='block'; b.innerHTML=html; }
+
+// R4: a refusal clears the result panel entirely (never leaves the PREVIOUS report showing, which would
+// read as if the new, failed paste had actually produced it) and disables Copy.
+function clearResult(){
+  lastResult = null;
+  $('preview').innerHTML = '';
+  $('meta').textContent = '';
+  $('insightscard').style.display = 'none';
+  $('insights').innerHTML = '';
+  $('ackrow').style.display = 'none';
+  $('bar').style.display = 'none';
+  $('bar').innerHTML = '';
+  gate();
+}
+
+async function generate(){
+  clearResult();
+  const pyodide = await pyodideReady;
+  const title = $('title').value, timepoint = $('timepoint').value, notes = $('notes').value;
+  const blocksText = Array.from(document.querySelectorAll('.bdata')).map(t=>t.value).filter(s=>s.trim());
+  if(!blocksText.length){ bar('err', 'Chưa có dữ liệu.'); return; }
+  pyodide.globals.set('_title', title);
+  pyodide.globals.set('_timepoint', timepoint);
+  pyodide.globals.set('_notes', notes);
+  pyodide.globals.set('_blocks', blocksText);
+  const resultJson = await pyodide.runPythonAsync(`
+import json
+blocks = list(_blocks)
+if len(blocks) == 1:
+    r = P.build(blocks[0], _title, _timepoint, _notes)
+else:
+    r = P.build_multi(blocks, _title, _timepoint, _notes)
+json.dumps(r, ensure_ascii=False)
+`);
+  const r = JSON.parse(resultJson);
+  renderChecks(r);
+  if(!r.ok){ clearResult(); return; }
+  show(r);
+}
+$('gen').onclick = ()=>generate().catch(e=>{ clearResult(); bar('err','Lỗi: '+esc(e.message||e)); });
+
+// R4: one summary line (likely cause + first offending row), details collapsed, never a wall of repeated
+// symptoms (the same underlying problem used to show once per affected row).
+function renderChecks(r){
+  const fails = (r.checks||[]).filter(c=>c.status==='fail');
+  const warns = (r.checks||[]).filter(c=>c.status==='warn');
+  if(!fails.length && !warns.length){ $('val').innerHTML = r.checks && r.checks.length ? '<div class="ok">✓ OK</div>' : ''; return; }
+  const head = fails[0] || warns[0];
+  const rowTxt = head.row ? ` (dòng ${head.row})` : '';
+  const summary = `<div class="${fails.length?'fail':'warn'}">${fails.length?'✗':'⚠'} ${esc(head.name)}${rowTxt}: ${esc(head.detail)}</div>`;
+  const rest = fails.slice(fails[0]?1:0).concat(warns.slice(head===warns[0]?1:0));
+  const details = rest.length
+    ? `<details><summary>+ ${rest.length} dòng kiểm tra khác</summary>`
+      + rest.map(c=>`<div class="${c.status==='fail'?'fail':'warn'}">${c.status==='fail'?'✗':'⚠'} ${esc(c.name)}${c.row?` (dòng ${c.row})`:''}: ${esc(c.detail)}</div>`).join('')
+      + `</details>`
+    : '';
+  $('val').innerHTML = summary + details;
+}
+
+function show(r){
+  $('preview').innerHTML = r.out.html_doc;
+  lastResult = r;
+  const w = r.warnings, items=[];
+  if(w.tp_stale) items.push('Mốc thời gian có thể chưa cập nhật: trùng mốc bản trước nhưng run-rate khác');
+  (w.stale_cols||[]).forEach(x=>items.push(esc(x.text)));
+  (w.xcheck||[]).forEach(x=>items.push(`đối soát cột <b>${esc(x.col)}</b>: ${x.rows} dòng lệch. ${x.examples.map(esc).join(' | ')}`));
+  if((w.plausibility||[]).length) items.push(`${w.plausibility.length} dòng MoM không hợp lý: ${w.plausibility.slice(0,3).map(p=>esc(p.who+' – '+p.why)).join('; ')}`);
+  (w.notes_unmatched||[]).forEach(u=>items.push(`<b>ghi chú chưa gắn vào báo cáo</b>: "${esc(u.line)}" — ${esc(u.reason)}`));
+  (w.checks_warn||[]).forEach(c=>items.push(esc(c)));
+  bar(items.length?'badbar':'good', items.length?'Cảnh báo:<ul>'+items.map(i=>`<li>${i}</li>`).join('')+'</ul>':'Không có cảnh báo.');
+  $('ack').checked=false; $('ackrow').style.display = items.length?'block':'none';
+  $('meta').textContent = 'Không dùng LLM (v4: 100% Python, chạy trong trình duyệt)';
+  gate();
+  renderInsights(r.insights||[]);
+}
+
+function renderInsights(ins){
+  $('insightscard').style.display = ins.length? '' : 'none';
+  $('insights').innerHTML = ins.map(i=>`<li>${esc(i.text)}</li>`).join('');
+}
+
+// ---------- copy / download (client-side only, no network) ----------
+async function copyRich(html, text){
+  await navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html],{type:'text/html'}), 'text/plain': new Blob([text],{type:'text/plain'})})]);
+}
+$('cmsg').onclick = ()=> lastResult && copyRich(lastResult.out.html_msg, lastResult.out.text).catch(e=>alert(e.message));
+$('cdoc').onclick = ()=> lastResult && copyRich(lastResult.out.html_doc, lastResult.out.text).catch(e=>alert(e.message));
+$('dlmd').onclick = ()=>{
+  if(!lastResult) return;
+  const blob = new Blob([lastResult.out.md], {type:'text/markdown'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'report.md'; a.click();
+};
+
+// ---------- sample data: SYNTHETIC samples only (H6, CHARTER v4.2) -- fake brand names/numbers, never the
+// pinned real-data goldens (templates/perf-flash/samples/input_v3.tsv / input_sample.tsv), which are
+// gitignored and stay local-only for v4's own parity tests. ----------
+$('sample-v2').onclick = async e=>{ e.preventDefault();
+  const t = await (await fetch(ROOT+"templates/perf-flash/samples/synthetic_input_v2.tsv")).text();
+  document.querySelector('.bdata').value = t;
+  scheduleValidate();
+};
+$('sample-v3').onclick = async e=>{ e.preventDefault();
+  const t = await (await fetch(ROOT+"templates/perf-flash/samples/synthetic_input_v3.tsv")).text();
+  document.querySelector('.bdata').value = t;
+  scheduleValidate();
+};
+</script>
+</body>
+</html>

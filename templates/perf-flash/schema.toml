@@ -1,0 +1,77 @@
+# perf-flash schema. Header patterns are regexes matched against casefolded, NFC-normalized headers.
+# perf-flash is 100% deterministic: no model, no network call, parsed and rendered by v4/pipeline.py.
+
+[columns]            # required: recomputed from these
+brand        = "^brand$"
+channel      = "^kênh$"
+plan         = "^plan$"
+ptd          = "^gmv plan up to date$"
+actual       = "^actual(?! tháng)(?! vs)"
+last         = "^actual tháng trước$"
+
+[crosscheck]         # optional precomputed columns: only cross-checked, never used for numbers
+progress     = "^tiến độ thực tế$"
+gap          = "^vượt / thiếu$"
+z_col        = "^actual vs plan ngày$"
+mom          = "^so với tháng trước$"
+
+[channels]
+total        = "TOTAL"
+affiliate    = "Affiliate"
+self_sell    = "Self-sell"
+self_children = ["LIVE nội bộ", "Video nội bộ", "Showcase"]
+pick_from    = ["Affiliate", "LIVE nội bộ", "Video nội bộ", "Showcase"]
+
+[channel_display]    # canonical (as in schema/data) -> name shown in the report; input accepts both
+"LIVE nội bộ"  = "LIVE inhouse"
+"Video nội bộ" = "Video inhouse"
+
+# C2 (CHARTER v4.3): no brand registry in the repo. Brand identity = the label exactly as
+# pasted (trimmed; apostrophe-normalized for matching only, displayed as pasted) -- no [brand_aliases]
+# section here, ever. Channel aliases above stay: that's template structure, not business data.
+
+[checks]
+tolerance_vnd = 1            # rounding tolerance for Affiliate+Self-sell=TOTAL and LIVE+Video+Showcase=Self-sell
+xcheck_rel_tol = 0.0005      # cross-check passes if within 0.011 abs OR this relative tolerance; rows below min_plan_to_date are skipped
+stale_share = 0.6           # a precomputed column is 'stale' if it equals the previous run on >= this share of rows although Actual changed
+stale_min_rows = 5
+runrate_tolerance = 0.001    # v2 only: warn if a row's plan_to_date/plan differs from the overall run-rate by more than this
+v3_runrate_tol_pp = 0.01     # v3 only: "% Required" must be identical (within this many pp) on every row
+k_tolerance = 0.01           # v3 only: (1+growth)/(1+DA growth) must be constant across rows within this
+
+[enrich]            # deterministic additions, each can be switched off
+governing    = true  # one-line summary under the title
+required_pace = true # pace needed to still reach target (Overall + each brand)
+delta        = true  # change vs the previous saved run of the same campaign
+hard_pace    = 2.0   # brand required pace above this (200%) -> 'khó về target'
+delta_min_pp = 0.1   # brands whose Z moved less than this many pp are not listed
+
+[display]
+marker_scope = "headline"    # "headline": 🟢/🔴 only on brand Z, EOC%, Overall signed numbers; channel-level = bold + sign. "all": every signed number
+small_brand_share = 0.01     # v3/retired compute.py only (pinned goldens depend on this value) -- lowlight-only collapse
+small_brand_share_v4 = 0.02  # v4.1 decision 5e: v4 surfaces only. Brands of EITHER kind below this plan share collapse
+                             # into one "Nhóm brand nhỏ" block. Separate key so the frozen v3/compute.py reference and
+                             # its pinned regression goldens (tests/test_perf_flash.py) are untouched.
+overall_pct_decimals = 2    # progress, run-rate, Y, Z, MoM at Overall
+brand_pct_decimals = 1       # Z, MoM, progress at brand/channel level
+eoc_pct_decimals = 1
+m_decimals = 1
+b_decimals = 2               # SPEC example "1.47B"
+k_decimals = 1
+
+[banned]             # added to the "hoa mỹ" list parsed from SPEC.md; a hit -> retry once -> ⚠️
+extra = ["cho thấy sự tăng trưởng mạnh mẽ", "bứt phá", "ấn tượng"]
+
+[plausibility]       # row guard on MoM: ⚠️ on that row's MoM + warning line
+max_abs_mom = 0.80           # |MoM| above this
+max_last_vs_plan = 1.5       # or Actual tháng trước > this × Plan of the same row
+
+[thresholds]
+material_share = 0.10        # a channel is a driver/cause only if |gap| >= this × the brand's |gap| (bottleneck: brand vs channel gap)
+min_plan_to_date = 1000000   # VND: below this a channel never shows % (amount only) and is never picked as driver/cause
+bottleneck_share = 0.30      # channel gap / net gap to count as cross-brand bottleneck
+contribution_high = 0.30     # brand plan / total plan
+contribution_mid = 0.05
+base_nho_share = 0.10        # v3 only: channel plan_to_date below this share of the brand's plan_to_date ...
+base_nho_z = 3.0             # ... AND |Z| above this (300%) -> "base nhỏ": still picked by VND gap (never excluded),
+                             # just rendered VND-first with the % tagged "(base nhỏ)" instead of leading on it
