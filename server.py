@@ -42,15 +42,16 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._host_ok():
             return self._send(403, {"error": "forbidden host"})
-        # R7 (CHARTER v4.4) / CHARTER v5.1: ONE report UI at the root link -- "/" (and "/index.html")
-        # serve web/index.html, which dispatches between the campaign (v4) and brand-monthly (v5)
-        # engines itself (dispatch.py), never a per-engine URL the team has to remember. Everything
-        # the page needs (its own .py/.toml source, synthetic samples) is served as a plain static
-        # file from the project root, the same way `python -m http.server` would, with the same
-        # host-allowlist guard on every request. web/v4/index.html and web/v5/index.html still exist
-        # on disk (their own engine's local dev/test entry point) but are no longer the root link.
-        if self.path in ("/", "/index.html"):
-            self.path = "/web/index.html"
+        # R7 (CHARTER v4.4) / CHARTER v5.1-v5.2: ONE report UI at the root link. The single page
+        # (dispatches between the campaign (v4) and brand-monthly (v5) engines itself via
+        # dispatch.py, never a per-engine URL the team has to remember) IS /index.html now -- this
+        # server has nothing left to remap it to, which is exactly the point: GitHub Pages serves
+        # that same file with no server.py at all, so this path must behave identically to a plain
+        # static file server over "/". The only thing still needed here is "/" -> "/index.html"
+        # (a bare directory isn't a servable file); web/index.html, web/v4/index.html and
+        # web/v5/index.html are now thin redirect stubs to it, not separate UIs.
+        if self.path == "/":
+            self.path = "/index.html"
         return self._serve_static()
 
     _CTYPES = {".html": "text/html; charset=utf-8", ".py": "text/x-python; charset=utf-8",

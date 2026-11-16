@@ -1,5 +1,290 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=web/v4/index.html">
-<title>Report generator v4</title>
-</head><body><a href="web/v4/index.html">Report generator v4</a></body></html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report generator (chạy trong trình duyệt)</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#e2e5ea;--accent:#2457d6;--ok:#188038;--bad:#d93025;--warn:#b26a00;--okbg:#e8f5ec;--badbg:#fdecea;--warnbg:#fff4e0}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1c2029;--ink:#e8ebf1;--mute:#9aa3b2;--line:#2c3240;--accent:#6c93ff;--ok:#5bc27a;--bad:#ff7b72;--warn:#e3a53c;--okbg:#17301f;--badbg:#3a1d1b;--warnbg:#3a2d13}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px}header span{color:var(--mute);font-size:13px}
+main{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+select,input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+textarea{font-family:Consolas,monospace;font-size:12.5px;resize:vertical;white-space:pre}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:7px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;width:100%;margin-top:12px;padding:10px}
+button:disabled{opacity:.5;cursor:wait}
+#val{margin-top:8px;font-size:13px}
+.ok{color:var(--ok)}.fail{color:var(--bad)}.warn{color:var(--warn)}
+#bar{display:none;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:13px}
+#bar.good{background:var(--okbg);color:var(--ok)}#bar.badbar{background:var(--warnbg);color:var(--warn)}#bar.err{background:var(--badbg);color:var(--bad)}
+#bar ul{margin:4px 0 0 18px;padding:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+#preview{border:1px solid var(--line);border-radius:8px;padding:6px 16px;background:var(--bg);max-height:65vh;overflow:auto}
+#preview ul{margin:2px 0 2px 0;padding-left:20px}#preview p{margin:10px 0 4px}#preview h2,#preview h3{margin:14px 0 4px}
+#meta{font-size:12px;color:var(--mute);margin-top:8px}
+.hint{color:var(--mute);font-size:12px}
+.block{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
+.block .bhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+#loading{padding:40px;text-align:center;color:var(--mute)}
+.privacy{font-size:12px;color:var(--mute);max-width:900px;margin:0 auto 10px;padding:0 16px}
+#engineBadge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--mute);margin-left:6px}
+#engineBadge.campaign{background:#dce7ff;color:#2457d6}
+#engineBadge.brand-monthly{background:#ffe6cf;color:#b26a00}
+</style>
+</head>
+<body>
+<header><h1>Report generator</h1><span>chạy 100% trong trình duyệt (Pyodide) · dữ liệu KHÔNG rời khỏi máy bạn · không LLM, không gửi mạng sau khi trang đã tải</span></header>
+<p class="privacy" id="loading">Đang tải Python runtime (Pyodide) lần đầu, có thể mất vài giây — vui lòng đợi...</p>
+<main style="display:none" id="app">
+<section>
+<div class="card">
+  <div class="hint">Dán 1 trong 2 loại báo cáo -- <b>campaign</b> (plan/actual) hoặc <b>brand-monthly</b> (building block theo tháng). Tự nhận diện, không cần chọn tay.<span id="engineBadge" style="display:none"></span></div>
+  <div class="row" id="campaignFields">
+    <div style="flex:3"><label for="title">Tiêu đề chiến dịch</label>
+      <input id="title" placeholder="tự điền từ dữ liệu dán vào, hoặc gõ tay"></div>
+    <div style="flex:1"><label for="timepoint">Mốc thời gian <b style="color:var(--bad)">*</b></label>
+      <input id="timepoint" placeholder="vd 20h 11.11"></div>
+  </div>
+  <div class="hint" id="multiBlockHint" style="margin-top:6px">Campaign nhiều platform? Dán mỗi platform vào một khối riêng. Brand-monthly nhiều platform? Dán cả 2 khối "Date update" vào một ô, hoặc mỗi khối một ô đều được.</div>
+  <div id="blocks"></div>
+  <button id="addblock">+ Thêm khối</button>
+  <div class="hint" style="margin-top:8px">
+    <a href="#" id="sample-campaign-v2">Mẫu campaign (v2)</a> ·
+    <a href="#" id="sample-campaign-v3">Mẫu campaign (v3)</a> ·
+    <a href="#" id="sample-brand">Mẫu brand-monthly</a>
+  </div>
+  <div id="val"></div>
+  <label for="notes" id="notesLabel">Ghi chú (tuỳ chọn, chỉ campaign) <span class="hint">— "Brand: fact" hoặc "Brand fact" (":" không bắt buộc)</span></label>
+  <textarea id="notes" rows="5" spellcheck="false"></textarea>
+  <button id="gen" class="primary">Tạo báo cáo</button>
+</div>
+</section>
+<section>
+<div class="card">
+  <div id="bar"></div>
+  <label id="ackrow" style="display:none;margin:6px 0"><input type="checkbox" id="ack"> Đã kiểm tra cảnh báo</label>
+  <div class="btns">
+    <button id="cmsg" disabled>Copy cho Lark Messenger</button>
+    <button id="cdoc" disabled>Copy cho Lark Docs</button>
+    <button id="dlmd" disabled>Tải .md</button>
+  </div>
+  <div id="preview"></div>
+  <div id="meta"></div>
+</div>
+<div class="card" id="insightscard" style="display:none">
+  <div style="font-weight:600;margin-bottom:6px">Quick insights</div>
+  <ul id="insights"></ul>
+</div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function esc(s){return (s+"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ---------- block textareas (one per campaign platform, or any brand-monthly chunking) ----------
+let blockN=0;
+function addBlock(value){
+  blockN++;
+  const id="block"+blockN;
+  const div=document.createElement("div"); div.className="block"; div.dataset.id=id;
+  div.innerHTML=`<div class="bhead"><span class="hint">Khối #${blockN}</span>`
+    +(blockN>1?`<button class="rm" type="button">Xoá</button>`:'')+`</div>`
+    +`<textarea class="bdata" rows="7" wrap="off" style="white-space:pre;overflow-x:auto" spellcheck="false">${value?esc(value):""}</textarea>`;
+  $('blocks').appendChild(div);
+  const rm=div.querySelector('.rm'); if(rm) rm.onclick=()=>{div.remove(); scheduleValidate();};
+  div.querySelector('.bdata').addEventListener('input', scheduleValidate);
+}
+$('addblock').onclick=()=>addBlock("");
+addBlock("");
+
+// ---------- Pyodide bootstrap: both engines' own source + dispatch.py, same-origin, no user data
+// leaves the page until Copy/download (client-side clipboard/file only). ----------
+const ROOT = "./";  // served from the repo root itself (CHARTER v5.2: GitHub Pages has no server.py
+                     // to remap "/" -- this file IS what the root link opens, directly)
+const FILES = [
+  "core/__init__.py","core/tsv.py","core/numfmt.py","core/render.py","core/highlight.py",
+  "v4/__init__.py","v4/facts.py","v4/pipeline.py",
+  "v4/adapters/__init__.py","v4/adapters/base.py","v4/adapters/registry.py","v4/adapters/v2.py","v4/adapters/v3.py",
+  "v4/surfaces/__init__.py","v4/surfaces/text.py","v4/surfaces/notes.py","v4/surfaces/insights.py",
+  "templates/perf-flash/schema.toml",
+  "v5/__init__.py","v5/config.py","v5/numfmt.py","v5/render.py","v5/facts.py","v5/pipeline.py",
+  "v5/adapters/__init__.py","v5/adapters/brand_monthly.py",
+  "v5/surfaces/__init__.py","v5/surfaces/text.py",
+  "templates/brand-monthly/schema.toml",
+  "dispatch.py",
+];
+let pyodideReady=null;
+async function initPyodide(){
+  const pyodide = await loadPyodide();
+  for(const f of FILES){
+    const text = await (await fetch(ROOT+f)).text();
+    const path = "/app/"+f;
+    const dir = path.substring(0, path.lastIndexOf("/"));
+    pyodide.FS.mkdirTree(dir);
+    pyodide.FS.writeFile(path, text, {encoding:"utf8"});
+  }
+  try{
+    const t = await (await fetch(ROOT+"typo_fix.toml"));
+    if(t.ok) pyodide.FS.writeFile("/app/typo_fix.toml", await t.text(), {encoding:"utf8"});
+  }catch(e){}
+  await pyodide.runPythonAsync(`
+import sys
+sys.path.insert(0, "/app")
+import dispatch as D
+`);
+  return pyodide;
+}
+pyodideReady = initPyodide().then(p=>{ $('loading').style.display='none'; $('app').style.display=''; return p; })
+  .catch(e=>{ $('loading').textContent = "Lỗi tải Pyodide: "+e; throw e; });
+
+const dirty = {title:false, timepoint:false};
+$('title').addEventListener('input', ()=>{ dirty.title = true; });
+$('timepoint').addEventListener('input', ()=>{ dirty.timepoint = true; });
+
+// ---------- cheap engine detection on every keystroke (sniff only, no parsing) to toggle the
+// campaign-only fields -- "same experience", never a separate UI per report type. ----------
+let validateTimer=null;
+function scheduleValidate(){
+  clearTimeout(validateTimer);
+  validateTimer = setTimeout(liveDetect, 350);
+}
+function setEngineUI(engine){
+  const badge = $('engineBadge');
+  if(!engine){ badge.style.display='none'; badge.className=''; }
+  else{ badge.style.display='inline-block'; badge.className=engine; badge.textContent = engine==='campaign' ? 'campaign' : 'brand-monthly'; }
+  $('campaignFields').style.display = (engine==='brand-monthly') ? 'none' : '';
+  $('notesLabel').style.display = (engine==='brand-monthly') ? 'none' : '';
+  $('notes').style.display = (engine==='brand-monthly') ? 'none' : '';
+}
+async function liveDetect(){
+  const pyodide = await pyodideReady;
+  const first = (document.querySelector('.bdata')||{}).value || '';
+  if(!first.trim()){ setEngineUI(null); $('val').innerHTML=''; return; }
+  pyodide.globals.set('_vtext', first);
+  let engine;
+  try{
+    engine = await pyodide.runPythonAsync(`
+try:
+    _eng = D.detect(_vtext)
+except Exception as e:
+    _eng = "__refuse__:" + str(e)
+_eng
+`);
+  }catch(e){ return; }
+  if(typeof engine === "string" && engine.startsWith("__refuse__:")){
+    setEngineUI(null);
+    $('val').innerHTML = `<div class="warn">⚠ ${esc(engine.slice(11))}</div>`;
+    return;
+  }
+  setEngineUI(engine);
+  $('val').innerHTML = '<div class="ok">✓ nhận diện: ' + esc(engine) + '</div>';
+}
+
+// ---------- run ----------
+let lastResult=null;
+function gate(){
+  const need = $('ackrow').style.display!=='none' && !$('ack').checked;
+  for(const id of ['cmsg','cdoc','dlmd']) $(id).disabled = !lastResult || need;
+}
+$('ack').onchange = gate;
+
+function bar(kind, html){ const b=$('bar'); b.className=kind; b.style.display='block'; b.innerHTML=html; }
+
+function clearResult(){
+  lastResult = null;
+  $('preview').innerHTML = '';
+  $('meta').textContent = '';
+  $('insightscard').style.display = 'none';
+  $('insights').innerHTML = '';
+  $('ackrow').style.display = 'none';
+  $('bar').style.display = 'none';
+  $('bar').innerHTML = '';
+  gate();
+}
+
+async function generate(){
+  clearResult();
+  const pyodide = await pyodideReady;
+  const title = $('title').value, timepoint = $('timepoint').value, notes = $('notes').value;
+  const blocksText = Array.from(document.querySelectorAll('.bdata')).map(t=>t.value).filter(s=>s.trim());
+  if(!blocksText.length){ bar('err', 'Chưa có dữ liệu.'); return; }
+  pyodide.globals.set('_title', title);
+  pyodide.globals.set('_timepoint', timepoint);
+  pyodide.globals.set('_notes', notes);
+  pyodide.globals.set('_blocks', blocksText);
+  const resultJson = await pyodide.runPythonAsync(`
+import json
+r = D.build(list(_blocks), _title, _timepoint, _notes)
+json.dumps(r, ensure_ascii=False)
+`);
+  const r = JSON.parse(resultJson);
+  renderChecks(r);
+  if(!r.ok){ clearResult(); setEngineUI(null); return; }
+  setEngineUI(r.engine);
+  show(r);
+}
+$('gen').onclick = ()=>generate().catch(e=>{ clearResult(); bar('err','Lỗi: '+esc(e.message||e)); });
+
+function renderChecks(r){
+  const fails = (r.checks||[]).filter(c=>c.status==='fail');
+  const warns = (r.checks||[]).filter(c=>c.status==='warn');
+  if(!fails.length && !warns.length){ $('val').innerHTML = r.checks && r.checks.length ? '<div class="ok">✓ OK</div>' : ''; return; }
+  const head = fails[0] || warns[0];
+  const rowTxt = head.row ? ` (dòng ${head.row})` : '';
+  $('val').innerHTML = `<div class="${fails.length?'fail':'warn'}">${fails.length?'✗':'⚠'} ${esc(head.name)}${rowTxt}: ${esc(head.detail)}</div>`;
+}
+
+// decision 11 / this charter's "same experience": ack_required/warning_messages are ALREADY the
+// same shape regardless of engine (dispatch.py's own job) -- this page never asks which engine ran.
+function show(r){
+  $('preview').innerHTML = r.out.html_doc;
+  lastResult = r;
+  const items = (r.warning_messages||[]).map(esc);
+  bar(items.length?'badbar':'good', items.length?'Cảnh báo:<ul>'+items.map(i=>`<li>${i}</li>`).join('')+'</ul>':'Không có cảnh báo.');
+  $('ack').checked=false; $('ackrow').style.display = r.ack_required?'block':'none';
+  $('meta').textContent = 'Không dùng LLM · engine: ' + r.engine;
+  gate();
+  renderInsights((r.insights||[]));
+}
+
+function renderInsights(ins){
+  $('insightscard').style.display = ins.length? '' : 'none';
+  $('insights').innerHTML = ins.map(i=>`<li>${esc(i.text)}</li>`).join('');
+}
+
+async function copyRich(html, text){
+  await navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html],{type:'text/html'}), 'text/plain': new Blob([text],{type:'text/plain'})})]);
+}
+$('cmsg').onclick = ()=> lastResult && copyRich(lastResult.out.html_msg, lastResult.out.text).catch(e=>alert(e.message));
+$('cdoc').onclick = ()=> lastResult && copyRich(lastResult.out.html_doc, lastResult.out.text).catch(e=>alert(e.message));
+$('dlmd').onclick = ()=>{
+  if(!lastResult) return;
+  const blob = new Blob([lastResult.out.md], {type:'text/markdown'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'report.md'; a.click();
+};
+
+// synthetic samples only (H6/CHARTER v4.2/v5 G8): fake brand names/numbers, never the pinned
+// real-data goldens, which are gitignored and stay local-only.
+async function loadSample(path, clearExtraBlocks){
+  const t = await (await fetch(ROOT+path)).text();
+  if(clearExtraBlocks){
+    document.querySelectorAll('.block').forEach((b,i)=>{ if(i>0) b.remove(); });
+  }
+  document.querySelector('.bdata').value = t;
+  scheduleValidate();
+}
+$('sample-campaign-v2').onclick = e=>{ e.preventDefault(); loadSample("templates/perf-flash/samples/synthetic_input_v2.tsv", true); };
+$('sample-campaign-v3').onclick = e=>{ e.preventDefault(); loadSample("templates/perf-flash/samples/synthetic_input_v3.tsv", true); };
+$('sample-brand').onclick = e=>{ e.preventDefault(); loadSample("templates/brand-monthly/samples/synthetic_brand_monthly.tsv", true); };
+</script>
+</body>
+</html>
