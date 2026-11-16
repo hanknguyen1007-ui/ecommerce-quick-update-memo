@@ -1,0 +1,60 @@
+### Config for the "brand-monthly" preset (CHARTER v5). Thresholds live here, not in code, so a
+### future tuning pass never touches v5/facts.py or v5/surfaces/text.py (decision 12).
+
+[thresholds]
+# decision 7: a block's contribution share to ΔGMV is only printed when |ΔGMV| as a fraction of the
+# prior-period DA reaches this. Also the body QoQ/MoM %Δ bold-significance cut for GMV/channel/traffic
+# block lines (decision 12/13 bolding), and the Quick-recap "overall" DA line's own (đi ngang) tag.
+significance = 0.05
+# decision 9: a Detailed (Livestream/Video/Showcase&other) line below this share of platform GMV
+# prints "DA · base nhỏ" instead of QoQ/MoM %.
+small_base = 0.02
+# decision 11: residual_shift flag -- Livestream DA falls by at least this fraction while
+# Showcase&other DA rises by at least this fraction, in the SAME comparison period (QoQ or MoM).
+residual_shift = 0.30
+# rule 12's "gần bằng nhau" cut for the MoM block-growth-race clause (in percentage points).
+gan_bang_pp = 0.02
+# rule 12's "giữ" cut for the Nguồn traffic takeaway's Ads-share wording, and the ratio-line
+# (Commission / Tỷ trọng / ROI) current-period bold cut, both in percentage points (ROI uses the
+# same cut applied to its own relative change since it is not itself a %).
+giu_pp = 0.01
+# Lowlight (a): Cost MoM minus that same block's own GMV MoM, in percentage points.
+cost_gap_pp = 0.20
+# Lowlight (d): Ads-share MoM change, in percentage points.
+ads_share_up_pp = 0.05
+# decision 4: elapsed-days-vs-Time-Runrate cross-check tolerance, in days.
+runrate_tol_days = 1
+
+[platforms]
+# decision 10 order (Shopee -> TikTok) and canonical display name/icon. G6: adding a third platform
+# means one more entry here (sniff pattern -> canonical name/icon) -- nothing in v5/adapters,
+# v5/facts.py or v5/surfaces/text.py names a platform literally.
+order = ["shopee", "tiktok"]
+
+[platforms.shopee]
+sniff = "shopee"
+display = "Shopee"
+heading = "Shopee"
+icon = "🟠"
+
+[platforms.tiktok]
+sniff = "tiktok"
+display = "TikTok"
+heading = "TikTok Shop"
+icon = "⚫"
+
+[labels]
+# decision 2: the exact (fold-normalized) row labels this adapter reads. Never the sheet's own
+# derived rows (DAGMV MoM, every % row, PoP, Growth, Ads take rate, ROAS, ROI) -- decision 3.
+date_update = "date update"
+month = "month"
+gmv = "gmv (total)"
+time_runrate = "time runrate"
+self_promotion = "self promotion"
+affiliate = "affiliate"
+ads_gmv = "shopping ads gmv"
+livestream = "livestream"
+video = "video"
+showcase = "showcase&other"
+affiliate_cost = "cost"
+ads_cost = "total_ads expense"

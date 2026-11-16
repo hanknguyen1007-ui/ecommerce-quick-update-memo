@@ -1,0 +1,26 @@
+# Top-level preset registry (CHARTER v5, G5/G6). v4's own campaign engine never needed one of these --
+# it was the only report type, so "/" just served web/v4/index.html directly (server.py's own comment,
+# R7/CHARTER v4.4). Adding a second, structurally different report type (this preset: QoQ/MoM building
+# blocks, no plan/channel/gap model at all) needed somewhere to say both exist, without that somewhere
+# being a v4/ file -- v4/adapters/registry.py's own sniff/parse contract is campaign-shaped end to end
+# (order/data/extra triples feeding v4/facts.py), so folding an unrelated adapter into it would risk
+# exactly the behavior change G5 forbids. This file is new, campaign code stays untouched (not even one
+# line), and extending it (G6) is: one more [presets.<name>] entry, pointing at that preset's own
+# adapter/facts/surface/page -- never an edit to an existing preset's entry.
+
+[presets.campaign]
+engine = "v4"
+adapter = "v4/adapters/registry.py"
+facts = "v4/facts.py"
+surface = "v4/surfaces/text.py"
+pipeline = "v4/pipeline.py"
+page = "web/v4/index.html"
+
+[presets.brand-monthly]
+engine = "v5"
+adapter = "v5/adapters/brand_monthly.py"
+facts = "v5/facts.py"
+surface = "v5/surfaces/text.py"
+pipeline = "v5/pipeline.py"
+page = "web/v5/index.html"
+config = "templates/brand-monthly/schema.toml"

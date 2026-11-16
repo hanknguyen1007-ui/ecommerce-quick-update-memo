@@ -30,6 +30,10 @@ v4/handoff/
 # gap) throughout this session's evidence trail. Stays on disk for local reading only; not public (H6).
 /v4/REVIEW_v4.md
 
+# CHARTER v5 G8: REVIEW_v5.md's G1 evidence quotes the two real pastes/golden (output/, already
+# gitignored above) -- same local-only rule, same reason.
+/v5/REVIEW_v5.md
+
 # C4 (CHARTER v4.3): local session/tool config -- not part of the shipped app.
 /.claude/
 
