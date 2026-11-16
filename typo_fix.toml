@@ -1,0 +1,4 @@
+# Applied to LLM prose after cleanup and BEFORE the number validator. Literal find -> replace (a capitalised variant is applied automatically).
+# Per-preset overrides: templates/<preset>/typo_fix.toml
+[fixes]
+"điểm dỗ" = "điểm đỡ"

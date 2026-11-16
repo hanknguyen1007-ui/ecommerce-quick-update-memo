@@ -1,0 +1,38 @@
+# H6 (CHARTER v4.2): real inputs, goldens with real GMV/notes, and generated output never get committed --
+# only synthetic samples (templates/perf-flash/samples/synthetic_*.tsv) are public-safe.
+__pycache__/
+*.pyc
+
+# real pinned v2/v3 samples + goldens (real brand names/GMV) -- v4's own parity tests read these from disk
+# regardless of git tracking; they just never get committed.
+templates/perf-flash/samples/input_v3.tsv
+templates/perf-flash/samples/input_sample.tsv
+templates/perf-flash/samples/notes_sample.txt
+templates/perf-flash/samples/output_v3.md
+templates/perf-flash/samples/output_v3_facts.json
+templates/perf-flash/samples/REVIEW_v3.md
+
+# generated report runs (real data, timestamped) and the handoff package built from them
+output/
+v4/handoff/
+
+# stray backup files (old test_perf_flash.py revisions) and an unrelated dev scratch script -- both
+# reference real brand names; not part of the v4 build, kept on disk, excluded from the first commit.
+*.bak*
+/lark_paste_test.py
+
+# archive/ (H1): the frozen legacy engine + its own test suite + output sample. Historical reference kept
+# on disk, not deleted -- but it quotes/exercises real brand names and GMV throughout (its own comments,
+# its own pinned test fixtures), so it stays local-only rather than going into the public repo.
+/archive/
+
+# internal review notes: raw test-log excerpts quote real GMV figures (e.g. the pinned v3 golden's overall
+# gap) throughout this session's evidence trail. Stays on disk for local reading only; not public (H6).
+/v4/REVIEW_v4.md
+
+# C4 (CHARTER v4.3): local session/tool config -- not part of the shipped app.
+/.claude/
+
+# C3 (CHARTER v4.3): local-only brand-display translation fixture for the parity tests (the pinned golden
+# pre-dates C2's removal of the brand-alias registry from committed code). Contains real brand names.
+/v4/tests/local_only/
