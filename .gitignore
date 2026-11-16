@@ -35,6 +35,7 @@ v4/handoff/
 # section exercises the same real paste (output/), so it stays local-only too.
 /v5/REVIEW_v5.md
 /v5/REVIEW_v5_1.md
+/v5/REVIEW_v5_2.md
 
 # C4 (CHARTER v4.3): local session/tool config -- not part of the shipped app.
 /.claude/
