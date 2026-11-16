@@ -49,7 +49,8 @@ delta_min_pp = 0.1   # brands whose Z moved less than this many pp are not liste
 [display]
 marker_scope = "headline"    # "headline": 🟢/🔴 only on brand Z, EOC%, Overall signed numbers; channel-level = bold + sign. "all": every signed number
 small_brand_share = 0.01     # v3/retired compute.py only (pinned goldens depend on this value) -- lowlight-only collapse
-small_brand_share_v4 = 0.02  # v4.1 decision 5e: v4 surfaces only. Brands of EITHER kind below this plan share collapse
+small_brand_share_v4 = 0.02  # v4.1 decision 5e, S1 (v4.6): v4 surfaces only. Brands of EITHER kind collapse
+                             # only if BOTH plan share AND actual share of the portfolio are below this
                              # into one "Nhóm brand nhỏ" block. Separate key so the frozen v3/compute.py reference and
                              # its pinned regression goldens (tests/test_perf_flash.py) are untouched.
 overall_pct_decimals = 2    # progress, run-rate, Y, Z, MoM at Overall

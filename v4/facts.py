@@ -228,11 +228,18 @@ def compute(order, data, S, title, timepoint="", taint=None, extra=None):
         e["contribution_s"] = N.pct(contrib, 1)
         e["impact_level"] = _impact_level(contrib, S)
         e["kind"] = "highlight" if e["gap"] >= 0 else "lowlight"
-        # decision 5e: small brands (by plan share) collapse into one "Nhóm brand nhỏ" block regardless of
-        # highlight/lowlight kind (v4.1 charter) -- was lowlight-only in v3. Uses the v4-only threshold key
-        # (small_brand_share_v4) so the frozen v3/compute.py reference + its pinned goldens stay untouched.
+        # S1 (CHARTER v4.6, Hiếu's decision): small = plan share AND actual share both below threshold --
+        # a brand that has grown past the threshold on actual (even with a stale/low plan share) stays a
+        # full block. Was plan-share-only (decision 5e, v4.1 charter); same threshold key/value, same
+        # "either kind" collapse. Both shares are exposed on every brand regardless of collapse outcome.
+        plan_share = contrib
+        actual_share = Fraction(d[tot]["actual"], sums["actual"])
+        e["plan_share"] = float(plan_share)
+        e["plan_share_s"] = N.pct(plan_share, 1)
+        e["actual_share"] = float(actual_share)
+        e["actual_share_s"] = N.pct(actual_share, 1)
         sbs = S["display"].get("small_brand_share_v4", S["display"].get("small_brand_share", 0))
-        e["collapsed"] = bool(sbs) and contrib < Fraction(str(sbs))
+        e["collapsed"] = bool(sbs) and plan_share < Fraction(str(sbs)) and actual_share < Fraction(str(sbs))
         e["channels"] = {}
         for c in [ch["affiliate"], ch["self_sell"], *ch["self_children"]]:
             x = d[c]
