@@ -13,6 +13,15 @@ def register(adapter):
     return adapter
 
 
+def sniff(text):
+    """-> True if any registered (campaign) adapter claims this text, without raising. Added for
+    CHARTER v5.1's single top-level entry point (dispatch.py) to ask "is this campaign-shaped?"
+    without duplicating _ADAPTERS/detect()'s own logic -- detect()/parse()'s own behavior, and every
+    existing caller of them, is unchanged."""
+    lines = T.split_text(text)
+    return any(a.sniff(lines) for a in _ADAPTERS)
+
+
 def detect(text):
     """-> the single adapter module that claims this text. Refuses on 0 or >1 matches."""
     lines = T.split_text(text)

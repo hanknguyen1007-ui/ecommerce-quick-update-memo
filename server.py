@@ -42,12 +42,15 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._host_ok():
             return self._send(403, {"error": "forbidden host"})
-        # R7 (CHARTER v4.4): the v4 page is the ONLY report UI -- "/" (and "/index.html") now serve it
-        # directly, not the old multi-preset/LLM form (removed). Everything else the page needs (its own
-        # .py/.toml source, synthetic samples) is served as a plain static file from the project root, the
-        # same way a `python -m http.server` would, with the same host-allowlist guard on every request.
+        # R7 (CHARTER v4.4) / CHARTER v5.1: ONE report UI at the root link -- "/" (and "/index.html")
+        # serve web/index.html, which dispatches between the campaign (v4) and brand-monthly (v5)
+        # engines itself (dispatch.py), never a per-engine URL the team has to remember. Everything
+        # the page needs (its own .py/.toml source, synthetic samples) is served as a plain static
+        # file from the project root, the same way `python -m http.server` would, with the same
+        # host-allowlist guard on every request. web/v4/index.html and web/v5/index.html still exist
+        # on disk (their own engine's local dev/test entry point) but are no longer the root link.
         if self.path in ("/", "/index.html"):
-            self.path = "/web/v4/index.html"
+            self.path = "/web/index.html"
         return self._serve_static()
 
     _CTYPES = {".html": "text/html; charset=utf-8", ".py": "text/x-python; charset=utf-8",

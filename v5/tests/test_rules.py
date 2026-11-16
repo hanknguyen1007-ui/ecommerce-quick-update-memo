@@ -62,6 +62,52 @@ class Rules(unittest.TestCase):
         self.assertNotIn("mức tăng", r["out"]["md"])
         self.assertNotIn("mức giảm", r["out"]["md"])
 
+    def test_bold_rule_sub_block_bold_is_gated_by_overall_period_significance_not_its_own_size(self):
+        """CHARTER v5.1's BOLD_RULE (v5/surfaces/text.py): a sub-block's own QoQ/MoM %Δ bolds
+        exactly when the OVERALL GMV's change in that SAME period is significant -- never because
+        the sub-block's own %Δ happens to be large. Shift GMV between Self promotion and Affiliate
+        (their sum, hence GMV, held fixed) so Affiliate's own QoQ moves +20% while GMV QoQ stays at
+        0% (insignificant): Affiliate's QoQ must NOT be bold despite its own large swing."""
+        vals = valid_values(MONTHS, CUR, 15)
+        shift = round(vals["self_promotion"][CUR] * 0.35)
+        vals["self_promotion"][CUR] -= shift
+        vals["affiliate"][CUR] += shift
+        vals["showcase"][CUR] -= shift  # keep Livestream + Video + Showcase == Self promotion
+        text = make_block("Testbrand", "Shopee", (2026, 11, 15), MONTHS, vals)
+        r = P.build(text)
+        self.assertTrue(r["ok"])
+        pf = r["facts"]["platforms"][0]
+        self.assertFalse(pf["gmv"]["qoq"]["sig"])
+        aff_qoq_pct = pf["blocks"]["affiliate"]["qoq"]["pct"]
+        self.assertGreaterEqual(abs(aff_qoq_pct), 0.20)  # Affiliate itself swings hard...
+        md = r["out"]["md"].split("### 1.")[1].split("### 2.")[0]
+        from v5 import numfmt as M
+        self.assertIn(f"QoQ: 🟢 {M.pct(aff_qoq_pct, 1, signed=True)} ·", md)  # plain, not **bold**
+
+    def test_bold_rule_every_block_bolds_in_a_significant_period_regardless_of_its_own_size(self):
+        """Mirror of the test above: once the overall GMV MoM clears 5%, EVERY block's own MoM
+        bolds in that period -- even a block whose own %Δ is tiny."""
+        vals = valid_values(MONTHS, CUR, 15)
+        _scale_all_cur_da(vals, 1.20)  # GMV MoM = +20%, comfortably significant
+        # Pull Self promotion's own MoM back to exactly 0% (dumping the difference into Affiliate,
+        # GMV untouched) -- SP itself isn't moving at all, only the platform overall is.
+        sp_prev_da = vals["self_promotion"][PREV] / PREV_DAYS
+        new_sp = round(sp_prev_da * 15)
+        diff = vals["self_promotion"][CUR] - new_sp
+        vals["self_promotion"][CUR] = new_sp
+        vals["affiliate"][CUR] += diff
+        vals["showcase"][CUR] -= diff
+        text = make_block("Testbrand", "Shopee", (2026, 11, 15), MONTHS, vals)
+        r = P.build(text)
+        self.assertTrue(r["ok"])
+        pf = r["facts"]["platforms"][0]
+        self.assertTrue(pf["gmv"]["mom"]["sig"])
+        sp_mom_pct = pf["blocks"]["self_promotion"]["mom"]["pct"]
+        self.assertEqual(sp_mom_pct, 0.0)  # SP's own change is exactly zero...
+        from v5 import numfmt as M
+        md = r["out"]["md"].split("### 1.")[1].split("### 2.")[0]
+        self.assertIn(f"MoM: 🟢 **{M.pct(sp_mom_pct, 1, signed=True)}**", md)  # ...but still bold
+
         vals2 = valid_values(MONTHS, CUR, 15)
         _scale_all_cur_da(vals2, 1.20)  # GMV MoM = +20% >= 5%: shares must show
         text2 = make_block("Testbrand", "Shopee", (2026, 11, 15), MONTHS, vals2)

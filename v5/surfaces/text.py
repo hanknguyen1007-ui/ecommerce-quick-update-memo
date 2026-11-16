@@ -1,6 +1,26 @@
 """Deterministic text surface for the "brand-monthly" preset (CHARTER v5, decisions 12-14). Pure
 formatting: every number, boolean and block selection already lives in the facts dict (v5/facts.py).
 No sentence here exists outside decision 12's fixed templates.
+
+BOLD_RULE (CHARTER v5.1 -- the one formatting rule that used to be unwritten):
+
+A sub-block's own QoQ or MoM %Δ (Self promotion / Affiliate / Ads GMV / Organic GMV, and their
+Detailed children under Self promotion) is rendered **bold** exactly when the OVERALL platform
+GMV's own change in that SAME comparison period is itself significant (|pct| >= thresholds
+.significance, decision 7's 5% cut -- the identical flag that gates contribution-share display on
+that period, `gmv["mom_shares_shown"]` / `gmv["qoq_shares_shown"]` in v5/facts.py). It is NOT the
+sub-block's own %Δ magnitude that decides this, and it does NOT depend on which block a Highlight/
+Lowlight/takeaway sentence happens to name. One flag per (platform, period) controls every block's
+bold in that period, uniformly: see `_block_metric_line`'s `gmv_sig` parameter below, and
+`_detail_line`'s analogous `flagged`-independent bolding is NOT a thing -- Detailed lines never bold
+their %Δ at all (see `_detail_line`: only the small_base/⚠️ flags vary there).
+
+The ONE exception to "GMV-period-significance gates everything in that period": the "Cost" line's
+own MoM %Δ bolds independently, exactly when Lowlight (a)'s own condition fires for that block
+(Cost MoM minus that block's own GMV MoM >= thresholds.cost_gap_pp) -- see `_cost_line`'s `flagged`
+and `facts.py`'s `aff_cost["flagged"]`/`ads_cost["flagged"]`. Ratio lines (Commission / Tỷ trọng /
+ROI) bold their own T11 value independently again, on thresholds.giu_pp -- see `_ratio_line`/
+`_ratio_line_ratio`. Tested in `v5/tests/test_rules.py::test_bold_rule_*`.
 """
 from v5 import numfmt as M
 from v5 import config as C

@@ -31,8 +31,10 @@ v4/handoff/
 /v4/REVIEW_v4.md
 
 # CHARTER v5 G8: REVIEW_v5.md's G1 evidence quotes the two real pastes/golden (output/, already
-# gitignored above) -- same local-only rule, same reason.
+# gitignored above) -- same local-only rule, same reason. REVIEW_v5_1.md's own browser-verification
+# section exercises the same real paste (output/), so it stays local-only too.
 /v5/REVIEW_v5.md
+/v5/REVIEW_v5_1.md
 
 # C4 (CHARTER v4.3): local session/tool config -- not part of the shipped app.
 /.claude/

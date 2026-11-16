@@ -3,8 +3,9 @@
 
 [thresholds]
 # decision 7: a block's contribution share to ΔGMV is only printed when |ΔGMV| as a fraction of the
-# prior-period DA reaches this. Also the body QoQ/MoM %Δ bold-significance cut for GMV/channel/traffic
-# block lines (decision 12/13 bolding), and the Quick-recap "overall" DA line's own (đi ngang) tag.
+# prior-period DA reaches this. Also the Quick-recap "overall" DA line's own (đi ngang) tag, AND the
+# full body-bolding rule (CHARTER v5.1): see v5/surfaces/text.py's "BOLD_RULE" docstring for the
+# exact, previously-unwritten rule this one number also drives.
 significance = 0.05
 # decision 9: a Detailed (Livestream/Video/Showcase&other) line below this share of platform GMV
 # prints "DA · base nhỏ" instead of QoQ/MoM %.
